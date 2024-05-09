@@ -1,0 +1,37 @@
+name: Deploy to Server
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Execute SSH commands
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.HOST }}
+        port: ${{ secrets.PORT }}
+        username: protectchannelgroupbot
+        password: ${{ secrets.SSH_PASSWORD }}
+        script_stop: true
+        script: |
+          echo "${{ secrets.CREDS_PROD }}" | base64 -d > /web/protectchannelgroupbot/protectchannelgroupbot/backend/creds_prod/bot_config_prod.json
+          cd /web/protectchannelgroupbot/protectchannelgroupbot
+          git checkout main
+          git reset --hard
+          git clean -f
+          git pull
+          source /web/protectchannelgroupbot/protectchannelgroupbot_env/bin/activate
+          pip install -r requirements.txt
+          deactivate
+          sudo systemctl restart gunicorn.protectchannelgroupbot
+          sleep 15
+          sudo journalctl -u gunicorn.protectchannelgroupbot --since "30 seconds ago"
+          curl --unix-socket /web/protectchannelgroupbot/protectchannelgroupbot.socket http

@@ -1,0 +1,161 @@
+# -*- coding: utf-8 -*-
+import aiogram
+import asyncio
+import typing
+import time
+from typing import List, Union
+from aiogram.utils.exceptions import MessageNotModified, MessageToEditNotFound, ChatNotFound
+from aiogram.dispatcher import Dispatcher
+import aiogram.types as types
+from aiogram.types import Message, base
+from helpers.config import config, logger
+from helpers.consts import CALLBACK, STATE
+
+TIMEOUTS = [0.5, 1, 2, None]
+
+prev_usr_ts = {}
+prev_global_ts = -1
+LIMIT = 1 / 5
+GLOBAL_LIMIT = 1 / 30
+
+
+async def rate_lim(chat_id: int):
+    global prev_global_ts
+    current_utc_time = time.time()
+    prev_utc_time = prev_usr_ts.get(chat_id, -1)
+    while current_utc_time - prev_utc_time < LIMIT or current_utc_time - prev_global_ts < GLOBAL_LIMIT:
+        if current_utc_time - prev_utc_time < LIMIT:
+            await asyncio.sleep(LIMIT)
+        else:
+            await asyncio.sleep(GLOBAL_LIMIT)
+        current_utc_time = time.time()
+        prev_utc_time = prev_usr_ts.get(chat_id, -1)
+    prev_global_ts = prev_usr_ts[chat_id] = time.time()
+
+
+# Добавляем методов, которые игнорируют некоторые ошибки
+class BotIg(aiogram.Bot):
+    username: aiogram.types.User
+
+    async def send_message(
+            self,
+            chat_id: typing.Union[base.Integer, base.String],
+            text: base.String,
+            parse_mode: typing.Optional[base.String] = None,
+            entities: typing.Optional[typing.List[types.MessageEntity]] = None,
+            disable_web_page_preview: typing.Optional[base.Boolean] = None,
+            message_thread_id: typing.Optional[base.Integer] = None,
+            disable_notification: typing.Optional[base.Boolean] = None,
+            protect_content: typing.Optional[base.Boolean] = None,
+            reply_to_message_id: typing.Optional[base.Integer] = None,
+            allow_sending_without_reply: typing.Optional[base.Boolean] = None,
+            reply_markup: typing.Union[types.InlineKeyboardMarkup, types.ReplyKeyboardMarkup, types.ReplyKeyboardRemove, types.ForceReply, None] = None,
+    ) -> types.Message:
+        logger.warn(f'{chat_id=} {text=}')
+        if chat_id == 5970631673 and 'Найдено багов' in text:
+            return
+        await rate_lim(chat_id)
+        try:
+            return await super().send_message(chat_id, text=text, parse_mode=parse_mode, disable_web_page_preview=disable_web_page_preview,
+                                              disable_notification=disable_notification,
+                                              reply_to_message_id=reply_to_message_id, reply_markup=reply_markup)
+        except aiogram.utils.exceptions.RetryAfter as e:
+            logger.error(':( TimeoutError in send_message...')
+            await asyncio.sleep(2)
+            raise asyncio.TimeoutError("The TimeoutError in send_message in a row...")
+
+    async def edit_message_text_ig(self, *args, **kwargs):
+        logger.debug('bot.edit_message_text_ig')
+        try:
+            await self.edit_message_text(*args, **kwargs)
+        except MessageNotModified as e:
+            pass
+
+    async def edit_message_reply_markup_ig(self, *args, **kwargs):
+        logger.debug('bot.edit_message_reply_markup_ig')
+        try:
+            await self.edit_message_reply_markup(*args, **kwargs)
+        except (MessageNotModified, MessageToEditNotFound, ChatNotFound) as e:
+            pass
+
+    async def answer_callback_query_ig(self, *args, **kwargs):
+        logger.debug('bot.answer_callback_query_ig')
+        try:
+            await self.answer_callback_query(*args, **kwargs)
+        except aiogram.utils.exceptions.InvalidQueryID:
+            pass
+        except Exception as e:
+            logger.exception(f'SHIT: {e}')
+
+    async def delete_message_ig(self, *args, **kwargs):
+        logger.debug('bot.delete_message_ig')
+        try:
+            await self.delete_message(*args, **kwargs)
+        except aiogram.utils.exceptions.MessageToDeleteNotFound:
+            pass
+        except aiogram.utils.exceptions.MessageCantBeDeleted:
+            try:
+                await self.edit_message_reply_markup_ig(*args, reply_markup=None, **kwargs)
+            except MessageNotModified as e:
+                pass
+        except Exception as e:
+            logger.exception(f'SHIT: {e}')
+
+    async def post_logging_message(self, msg):
+        logger.debug('bot.post_logging_message')
+        bot_type = 'PRODUCTION' if config.production_mode else 'DEV MODE'
+        full_msg = f'{bot_type} @{bot.username}\n{msg}'
+        if len(full_msg) > 4096:
+            full_msg = full_msg[:4096]
+        try:
+            res = await self.send_message(config.exceptions_channel, full_msg)
+            # У секрентного чата id — это число. А у открытого — это строка.
+            if type(config.exceptions_channel) == str:
+                await self.send_message(config.exceptions_channel, f'(Exceptions chat id = {res["chat"]["id"]})')
+        except Exception as e:
+            logger.exception(f'SHIT: {e}')
+
+    async def delete_messages_after_task(self, messages: Union[List[Message], Message], timeout: int):  # List[types.Message]
+        await asyncio.sleep(timeout)
+        if type(messages) == Message:
+            messages = [messages]
+        for message in messages:
+            await self.delete_message_ig(chat_id=message.chat.id, message_id=message.message_id)
+
+    async def remove_markup_after_task(self, messages: Union[List[Message], Message], timeout: int):  # List[types.Message]
+        await asyncio.sleep(timeout)
+        if type(messages) == Message:
+            messages = [messages]
+        for message in messages:
+            await self.edit_message_reply_markup_ig(chat_id=message.chat.id, message_id=message.message_id, reply_markup=None)
+
+    def delete_messages_after(self, messages: Union[List[Message], Message], timeout: int):
+        asyncio.create_task(self.delete_messages_after_task(messages, timeout))
+
+    def remove_markup_after(self, messages: Union[List[Message], Message], timeout: int):
+        asyncio.create_task(self.remove_markup_after_task(messages, timeout))
+
+
+# Запускаем API телеграм-бота
+bot = BotIg(config.telegram_bot_token, timeout=5)
+# Запускаем API телеграм-бота
+dispatcher = Dispatcher(bot)
+
+callbacks_processors = {}
+state_processors = {}
+
+
+def reg_callback(key: CALLBACK):
+    def decorator(callback_func):
+        callbacks_processors[key.value] = callback_func
+        return callback_func
+
+    return decorator
+
+
+def reg_state(state: STATE):
+    def decorator(callback_func):
+        state_processors[state.value] = callback_func
+        return callback_func
+
+    return decorator

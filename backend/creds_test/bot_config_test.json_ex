@@ -1,0 +1,9 @@
+{
+  "config_name": "test",
+  "telegram_bot_token": "1111111111:AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+  "webhook_host": "bot.domain.ru",
+  "webhook_port": 443,
+  "db_filename": "db/test.db",
+  "exceptions_channel": -1123123123123,
+  "sentry_dsn": ""
+}

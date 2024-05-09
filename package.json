@@ -1,0 +1,22 @@
+{
+  "name": "xxx",
+  "version": "0.0.1",
+  "description": "xxx",
+  "author": "",
+  "private": true,
+  "license": "Apache-2.0",
+  "scripts": {
+    "=== PROD ===": "",
+    "build": "webpack --mode production",
+    "prod": "webpack serve --open --mode production",
+    "=== DEV ===": "",
+    "dev": "webpack serve --open --mode development",
+    "=== BACK ===": "",
+    "back": "cd backend/src && adev runserver",
+    "=== LINT ===": ""
+  },
+  "devDependencies": {
+  },
+  "dependencies": {
+  }
+}
