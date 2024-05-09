@@ -2,10 +2,10 @@
 # ...
 
 # Настраиваем ssl для нового поддомена
-sudo certbot certonly --nginx -d protectchannelgroupbot.shashkovs.ru
-   # /etc/letsencrypt/live/protectchannelgroupbot.shashkovs.ru/fullchain.pem
+sudo certbot certonly --nginx -d protectchannelgroupbot.proj179.ru
+   # /etc/letsencrypt/live/protectchannelgroupbot.proj179.ru/fullchain.pem
    # Your key file has been saved at:
-   # /etc/letsencrypt/live/protectchannelgroupbot.shashkovs.ru/privkey.pem
+   # /etc/letsencrypt/live/protectchannelgroupbot.proj179.ru/privkey.pem
 
 
 # Содержимое каждого сайта будет находиться в собственном каталоге, поэтому создаём нового пользователя
@@ -48,7 +48,7 @@ sudo mkdir /web/protectchannelgroupbot/.ssh
 sudo chmod 0700 /web/protectchannelgroupbot/.ssh
 sudo touch /web/protectchannelgroupbot/.ssh/authorized_keys
 sudo chmod 0644 /web/protectchannelgroupbot/.ssh/authorized_keys
-sudo ssh-keygen -t ed25519 -C "protectchannelgroupbot@protectchannelgroupbot.shashkovs.ru"
+sudo ssh-keygen -t ed25519 -C "protectchannelgroupbot@protectchannelgroupbot.proj179.ru"
   /web/protectchannelgroupbot/.ssh/protectchannelgroupbot_rsa_key_for_github
 
 sudo chmod 0600 /web/protectchannelgroupbot/.ssh/protectchannelgroupbot_rsa_key_for_github
@@ -104,7 +104,7 @@ sudo nano backend/creds_prod/bot_config_prod.json
   "telegram_bot_token": "6969370262:XXX",
 
   "use_webhooks": true,
-  "webhook_host": "protectchannelgroupbot.shashkovs.ru",
+  "webhook_host": "protectchannelgroupbot.proj179.ru",
   "webhook_port": 443,
   "db_filename": "../db/protectchannelgroupbot.sqlite",
   "exceptions_channel_public": "@qwqw",
@@ -167,10 +167,10 @@ tee /web/protectchannelgroupbot/protectchannelgroupbot.conf << EOF
     server {
         listen [::]:443 ssl http2; # managed by Certbot
         listen 443 ssl http2; # managed by Certbot
-        server_name protectchannelgroupbot.shashkovs.ru; # managed by Certbot
+        server_name protectchannelgroupbot.proj179.ru; # managed by Certbot
 
-        ssl_certificate /etc/letsencrypt/live/protectchannelgroupbot.shashkovs.ru/fullchain.pem; # managed by Certbot
-        ssl_certificate_key /etc/letsencrypt/live/protectchannelgroupbot.shashkovs.ru/privkey.pem; # managed by Certbot
+        ssl_certificate /etc/letsencrypt/live/protectchannelgroupbot.proj179.ru/fullchain.pem; # managed by Certbot
+        ssl_certificate_key /etc/letsencrypt/live/protectchannelgroupbot.proj179.ru/privkey.pem; # managed by Certbot
         include /etc/letsencrypt/options-ssl-nginx.conf; # managed by Certbot
         ssl_dhparam /etc/pki/nginx/dhparam.pem;
         add_header Strict-Transport-Security "max-age=31536000; includeSubDomains; preload" always;
@@ -238,7 +238,7 @@ sudo systemctl restart gunicorn.protectchannelgroupbot
 sleep 15
 sudo journalctl -u gunicorn.protectchannelgroupbot --since "30 seconds ago"
 #curl --unix-socket /web/protectchannelgroupbot/protectchannelgroupbot.socket http
-#curl https://protectchannelgroupbot.shashkovs.ru/tester
+#curl https://protectchannelgroupbot.proj179.ru/tester
 
 
 

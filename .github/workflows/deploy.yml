@@ -34,4 +34,3 @@ jobs:
           sudo systemctl restart gunicorn.protectchannelgroupbot
           sleep 15
           sudo journalctl -u gunicorn.protectchannelgroupbot --since "30 seconds ago"
-          curl --unix-socket /web/protectchannelgroupbot/protectchannelgroupbot.socket http
